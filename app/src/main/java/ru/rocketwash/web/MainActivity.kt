@@ -18,9 +18,10 @@ import kotlinx.android.synthetic.main.activity_main.*
 class MainActivity : AppCompatActivity() {
     private val TAG: String = MainActivity::class.java.simpleName
 
-    private val PERMISSION_DIALOG_TAG = "${TAG}_PERMISSION_DIALOG"
     private val PERMISSION_CAMERA = Manifest.permission.CAMERA
     private val REQUEST_PERMISSION_CAMERA = 132
+    private var permissionCameraRequest: PermissionRequest? = null
+    private var permissionsArray: Array<String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,14 +31,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (!isPermissionGranted()) {
-            ActivityCompat.requestPermissions(this, arrayOf(PERMISSION_CAMERA), REQUEST_PERMISSION_CAMERA)
-        } else {
-            webView.onResume()
-        }
+        webView.onResume()
     }
 
-    private fun isPermissionGranted() = ActivityCompat.checkSelfPermission(this, PERMISSION_CAMERA) != PackageManager.PERMISSION_DENIED
+    private fun isPermissionCameraGranted() = ActivityCompat.checkSelfPermission(this, PERMISSION_CAMERA) != PackageManager.PERMISSION_DENIED
 
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -69,29 +66,30 @@ class MainActivity : AppCompatActivity() {
 
             @TargetApi(Build.VERSION_CODES.LOLLIPOP)
             override fun onPermissionRequest(request: PermissionRequest) {
-                Log.d(TAG, "on permission request: ${request.resources}")
-                val permissions = request.resources
+                for (permission in request.resources) {
+                    Log.d(TAG, "on permission request: $permission")
 
-                val permissionDialog = PermissionDialog.newInstance(permissions)
-                permissionDialog.listener = object : PermissionDialog.Listener {
-                    override fun accept() {
-                        request.grant(permissions)
-                    }
-
-                    override fun decline() {
-                        request.deny()
+                    if (permission == PermissionRequest.RESOURCE_VIDEO_CAPTURE) {
+                        permissionCameraRequest = request
+                        permissionsArray = arrayOf(permission)
+                        if (isPermissionCameraGranted()) {
+                            request.grant(permissionsArray)
+                            break
+                        } else {
+                            ActivityCompat.requestPermissions(this@MainActivity,
+                                    arrayOf(PERMISSION_CAMERA),
+                                    REQUEST_PERMISSION_CAMERA)
+                        }
+                        break
                     }
                 }
-                permissionDialog.show(supportFragmentManager, PERMISSION_DIALOG_TAG)
             }
 
         }
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
 
-        if (isPermissionGranted()) {
-            loadWebview()
-        }
+        loadWebview()
     }
 
     private fun showProgressBar() {
@@ -102,13 +100,14 @@ class MainActivity : AppCompatActivity() {
         progressBar.visibility = View.GONE
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
             REQUEST_PERMISSION_CAMERA -> {
                 if (permissions.isNotEmpty() && grantResults.isNotEmpty()
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    loadWebview()
+                    permissionCameraRequest!!.grant(permissionsArray)
                 }
             }
         }

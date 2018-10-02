@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RocketWash Web</string>
+    <string name="dialog_permission_title">Требуется разрешение</string>
+    <string name="dialog_permission_message">Подтвердите следующие разрешения: %s</string>
+    <string name="dialog_permission_action_cancel">Отменить</string>
+    <string name="dialog_permission_action_accept">Разрешить</string>
+</resources>

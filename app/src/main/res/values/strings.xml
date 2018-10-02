@@ -1,7 +1,6 @@
 <resources>
     <string name="app_name">RocketWash Web</string>
-    <!--<string name="url">https://beta.rocketwash.me</string>-->
-    <string name="url">https://webcamtests.com/</string>
+    <string name="url" translatable="false">https://beta.rocketwash.me</string>
     <string name="dialog_permission_title">Permissions required</string>
     <string name="dialog_permission_message">Confirm the following permissions: %s</string>
     <string name="dialog_permission_action_cancel">Deny</string>
