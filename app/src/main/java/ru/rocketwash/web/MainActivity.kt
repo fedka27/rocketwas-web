@@ -1,19 +1,26 @@
 package ru.rocketwash.web
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.annotation.TargetApi
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.support.annotation.RequiresApi
+import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
 import android.view.View
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
+    private val TAG: String = MainActivity::class.java.simpleName
+
+    private val PERMISSION_DIALOG_TAG = "${TAG}_PERMISSION_DIALOG"
+    private val PERMISSION_CAMERA = Manifest.permission.CAMERA
+    private val REQUEST_PERMISSION_CAMERA = 132
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,8 +30,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        webView.onResume()
+        if (!isPermissionGranted()) {
+            ActivityCompat.requestPermissions(this, arrayOf(PERMISSION_CAMERA), REQUEST_PERMISSION_CAMERA)
+        } else {
+            webView.onResume()
+        }
     }
+
+    private fun isPermissionGranted() = ActivityCompat.checkSelfPermission(this, PERMISSION_CAMERA) != PackageManager.PERMISSION_DENIED
+
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView() {
@@ -53,11 +67,31 @@ class MainActivity : AppCompatActivity() {
         }
         webView.webChromeClient = object : WebChromeClient() {
 
+            @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+            override fun onPermissionRequest(request: PermissionRequest) {
+                Log.d(TAG, "on permission request: ${request.resources}")
+                val permissions = request.resources
+
+                val permissionDialog = PermissionDialog.newInstance(permissions)
+                permissionDialog.listener = object : PermissionDialog.Listener {
+                    override fun accept() {
+                        request.grant(permissions)
+                    }
+
+                    override fun decline() {
+                        request.deny()
+                    }
+                }
+                permissionDialog.show(supportFragmentManager, PERMISSION_DIALOG_TAG)
+            }
+
         }
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
 
-        webView.loadUrl(getString(R.string.url))
+        if (isPermissionGranted()) {
+            loadWebview()
+        }
     }
 
     private fun showProgressBar() {
@@ -66,6 +100,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun hideProgressBar() {
         progressBar.visibility = View.GONE
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            REQUEST_PERMISSION_CAMERA -> {
+                if (permissions.isNotEmpty() && grantResults.isNotEmpty()
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    loadWebview()
+                }
+            }
+        }
+    }
+
+    private fun loadWebview() {
+        webView.loadUrl(getString(R.string.url))
     }
 
     override fun onPause() {
